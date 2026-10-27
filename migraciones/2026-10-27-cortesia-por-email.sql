@@ -1,3 +1,4 @@
+-- APLICADA en nuvi-pruebas y TelemedProject el 27 oct 2026. Los emails se agregan aparte (no van en el repo).
 -- 2026-10-27: MEMBRESIA DE CORTESIA POR EMAIL, antes de que el paciente exista.
 -- La Dra. agrega el email aqui; cuando esa persona se registra y guarda su
 -- historial, su fila de health_history nace con plan 'Comped' y paid = true:
