@@ -26,6 +26,10 @@
 //   1 por defecto). El periodo gratis es 30 x free_months dias; despues
 //   nmi-renew cobra la mensual a la tarjeta guardada. El numero de meses lo
 //   lee SIEMPRE este servidor de la base, nunca el navegador.
+// 27oct-2: promo_codes.comped = true -> MEMBRESIA DE CORTESIA: el paciente
+//   queda en plan 'Comped' (nunca se le cobra, no vence; nmi-renew lo salta).
+//   La tarjeta se verifica y se guarda igual, sin cobrar, por si un dia la
+//   clinica decide empezar a cobrarle (cambiando su plan a mano).
 //
 // DEPLOY
 //   supabase functions deploy nmi-charge --no-verify-jwt
@@ -68,13 +72,13 @@ const promoErr = (reason: string, status = 409) =>
   json({ ok: false, paid: false, valid: false, promo_invalid: true, reason, error: PROMO_MSG[reason] || PROMO_MSG.invalid }, status);
 // Cuantos meses regala un codigo (1..12). Lo lee de la base con la service
 // role; si la columna no existe o falla, 1 (el comportamiento de siempre).
-export async function mesesGratis(db: ReturnType<typeof createClient>, code: string): Promise<number> {
+export async function infoCodigo(db: ReturnType<typeof createClient>, code: string): Promise<{ months: number; comped: boolean }> {
   try {
-    const { data, error } = await db.from("promo_codes").select("free_months").eq("code", code).maybeSingle();
-    if (error) { console.error("[promo] free_months:", error.message); return 1; }
+    const { data, error } = await db.from("promo_codes").select("free_months,comped").eq("code", code).maybeSingle();
+    if (error) { console.error("[promo] free_months/comped:", error.message); return { months: 1, comped: false }; }
     const n = Math.floor(Number(data?.free_months));
-    return Number.isFinite(n) && n >= 1 && n <= 12 ? n : 1;
-  } catch (_) { return 1; }
+    return { months: Number.isFinite(n) && n >= 1 && n <= 12 ? n : 1, comped: data?.comped === true };
+  } catch (_) { return { months: 1, comped: false }; }
 }
 export const textoGratis = (m: number) => m > 1 ? `First ${m} months free` : "First month free";
 
@@ -123,12 +127,13 @@ export async function nmiValidate(p: Record<string, string>): Promise<Record<str
 // Devuelve la lista de errores de base (vacia si todo se guardo). Un cobro
 // aprobado que no se registra es lo PEOR que puede pasar: se devuelve el
 // error para que el paciente vea "no vuelvas a pagar" y no un exito falso.
-export async function aplicarPago(db: ReturnType<typeof createClient>, order: Record<string, unknown>, nmi: Record<string, string>, vaultId: string | null, opts: { promo?: string; months?: number } = {}): Promise<string[]> {
+export async function aplicarPago(db: ReturnType<typeof createClient>, order: Record<string, unknown>, nmi: Record<string, string>, vaultId: string | null, opts: { promo?: string; months?: number; comped?: boolean } = {}): Promise<string[]> {
   const now = new Date().toISOString();
   const fallos: string[] = [];
   const chk = (que: string, r: { error?: { message?: string } | null }) => { if (r?.error) { console.error("[nmi] " + que + ":", r.error.message); fallos.push(que + ": " + r.error.message); } };
   const promo = opts.promo || "";
   const meses = promo ? Math.max(1, Math.min(12, Math.floor(Number(opts.months) || 1))) : 1;
+  const cortesia = !!promo && opts.comped === true;
   let hastaISO = "";
 
   const ordUpd: Record<string, unknown> = {
@@ -143,7 +148,7 @@ export async function aplicarPago(db: ReturnType<typeof createClient>, order: Re
     const r1 = await db.from("athm_orders").update({ ...ordUpd, amount: 0, promo_code: promo }).eq("ref", order.ref);
     if (r1?.error) {
       console.error("[nmi] athm_orders promo (amount 0) fallo, se guarda sin amount:", r1.error.message);
-      chk("athm_orders", await db.from("athm_orders").update({ ...ordUpd, label: textoGratis(meses) + " (" + promo + ") — $0.00" }).eq("ref", order.ref));
+      chk("athm_orders", await db.from("athm_orders").update({ ...ordUpd, label: (cortesia ? "Complimentary membership" : textoGratis(meses)) + " (" + promo + ") — $0.00" }).eq("ref", order.ref));
     }
   } else {
     chk("athm_orders", await db.from("athm_orders").update(ordUpd).eq("ref", order.ref));
@@ -162,7 +167,7 @@ export async function aplicarPago(db: ReturnType<typeof createClient>, order: Re
     const hasta = new Date(desde); hasta.setDate(hasta.getDate() + MEMBERSHIP_DAYS * meses);
     hastaISO = hasta.toISOString().slice(0, 10);
     const upd: Record<string, unknown> = {
-      paid: true, paid_at: hh.paid_at || now, plan: hh.plan === "Comped" ? "Comped" : plan,
+      paid: true, paid_at: hh.paid_at || now, plan: (cortesia || hh.plan === "Comped") ? "Comped" : plan,
       membership_paid_until: hastaISO,
       membership_cancelled: false, membership_cancelled_at: null, membership_cancel_reason: null,
       last_renewal_at: now,
@@ -182,7 +187,9 @@ export async function aplicarPago(db: ReturnType<typeof createClient>, order: Re
     const receipt = "NV-" + s(order.ref);
     const patient = { name: hh.full_name || hh.email, email: hh.email };
     let payload: unknown;
-    if (order.kind === "membership" && promo) {
+    if (order.kind === "membership" && cortesia) {
+      payload = { event: "payment", patient, data: { amount: "$0.00", plan: "Complimentary", receipt, date: now, coupon: "Complimentary membership" } };
+    } else if (order.kind === "membership" && promo) {
       payload = { event: "payment", patient, data: { amount: "$0.00", plan: "Basic", receipt, date: now,
         coupon: textoGratis(meses), free_trial: true, free_months: meses, renews_on: hastaISO, renew_amount: "$" + RENEW_PRICE.toFixed(2),
         last4: s(nmi.cc_number).slice(-4) || null } };
@@ -234,7 +241,7 @@ Deno.serve(async (req) => {
       const { data: chkp, error: chkErr } = await db.rpc("promo_check", { p_code: promo, p_user: u.user.id });
       if (chkErr) { console.error("[promo] promo_check:", chkErr.message); return json({ ok: false, valid: false, error: "We could not check the code right now. Try again in a moment." }, 503); }
       if (!chkp?.ok) return promoErr(s(chkp?.reason) || "invalid", 200);
-      return json({ ok: true, valid: true, code: promo, today: 0, then: RENEW_PRICE, months: await mesesGratis(db, promo) });
+      return json({ ok: true, valid: true, code: promo, today: 0, then: RENEW_PRICE, ...(await infoCodigo(db, promo)) });
     }
 
     const { data: order } = await db.from("athm_orders").select("*").eq("ref", ref).maybeSingle();
@@ -297,8 +304,8 @@ Deno.serve(async (req) => {
         await db.from("athm_orders").update({ status: "declined", processor: "nmi", error: "promo confirm failed" }).eq("ref", ref);
         return promoErr("used_up");
       }
-      const meses = await mesesGratis(db, promo);
-      const fallosP = await aplicarPago(db, { ...(order as Record<string, unknown>), amount: 0, target_id: PROMO_PLAN }, nmi, vault, { promo, months: meses });
+      const { months: meses, comped } = await infoCodigo(db, promo);
+      const fallosP = await aplicarPago(db, { ...(order as Record<string, unknown>), amount: 0, target_id: comped ? "Comped" : PROMO_PLAN }, nmi, vault, { promo, months: meses, comped });
       if (fallosP.length) {
         await db.from("athm_orders").update({ status: "paid_unapplied", processor: "nmi", transaction_id: s(nmi.transactionid), error: fallosP.join(" | ").slice(0, 500) }).eq("ref", ref);
         return json({ ok: false, paid: true, charged: false,
@@ -306,7 +313,7 @@ Deno.serve(async (req) => {
                + "Do not start again — message your care team with reference " + ref + " and they will activate it.",
           detail: fallosP }, 500);
       }
-      return json({ ok: true, paid: true, promo: true, amount: 0, then: RENEW_PRICE, months: meses, transaction_id: s(nmi.transactionid),
+      return json({ ok: true, paid: true, promo: true, amount: 0, then: comped ? 0 : RENEW_PRICE, months: meses, comped, transaction_id: s(nmi.transactionid),
                     last4: s(nmi.cc_number).slice(-4) || null, saved_card: true });
     }
 
