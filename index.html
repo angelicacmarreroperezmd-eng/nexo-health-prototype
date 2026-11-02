@@ -11764,7 +11764,10 @@ if(!window.supabase){
     // Pacientes pendientes: pagaron y esperan algo del medico.
     // 2 nov 2026: "Con receta · sin pagar" ya no cuenta como pendiente: le
     // toca al PACIENTE pagar, no al medico. Se ve aparte, en una linea.
+    // Membresia cancelada: no esperan nada del medico. Fuera de pendientes
+    // (salvo "PAGÓ · sin aplicar", que es urgente igual).
     const todosPend = (npPatients || []).map(p => ({ p: p, e: npEtapaPaciente(p) }))
+      .filter(x => x.e.urgente || !x.p.membership_cancelled)
       .filter(x => x.e.urgente || x.e.alerta || (x.p.paid && x.e.texto === 'Falta agendar' && !x.p.membership_cancelled));
     const esperanPago = todosPend.filter(x => x.e.texto === 'Con receta · sin pagar');
     const llaveP = x => 'p:' + x.p.user_id + ':' + x.e.texto;
