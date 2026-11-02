@@ -1,7 +1,7 @@
-// notify — Supabase Edge Function (build 31oct-1)
+// notify — Supabase Edge Function (build 2nov-1)
+// 2nov-1: los avisos con informacion de pacientes van solo a los proveedores.
 // 31oct-1: membresia cada 28 dias en los textos; los avisos de pagos al staff
-//   (pago, medicamento, renovacion declinada, receta aprobada) van a STAFF_AVISOS
-//   (sin alejandro@).
+//   (pago, medicamento, renovacion declinada, receta aprobada) van a STAFF_AVISOS.
 // 30oct-1: evento appointment_welcome (bienvenida + confirmacion de cita, ES/EN).
 // 30oct-2: botones Confirmar / Reprogramar (no cancelar). El medico recibe un
 //   correo cuando el paciente confirma o pide reprogramar.
@@ -11,9 +11,14 @@
 // DEPLOY: slug swift-responder, --no-verify-jwt.
 
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const NOTIFY_TO = (Deno.env.get("NOTIFY_TO")
-  ?? "alejandro@nuviclinic.com, drcampa@nuviclinic.com, drangelicamarrero@nuviclinic.com")
-  .split(",").map((e) => e.trim()).filter(Boolean);
+// 2nov-1 (HIPAA): los avisos con informacion de pacientes van SOLO a los
+// proveedores de esta lista, diga lo que diga el secret NOTIFY_TO.
+const PROVEEDORES = ["drcampa@nuviclinic.com", "drangelicamarrero@nuviclinic.com"];
+const NOTIFY_TO = (() => {
+  const l = (Deno.env.get("NOTIFY_TO") ?? PROVEEDORES.join(","))
+    .split(",").map((e) => e.trim().toLowerCase()).filter((e) => PROVEEDORES.includes(e));
+  return l.length ? l : PROVEEDORES;
+})();
 const CLINIC_PHONE = Deno.env.get("CLINIC_PHONE") ?? "";
 const FROM       = "Nuvi Clinic <info@nuviclinic.com>";
 const SITE       = "https://nuviclinic.com";
@@ -135,7 +140,7 @@ async function autorizadoPorNonce(req: Request): Promise<boolean> {
 }
 
 // Destino de avisos al medico cuando la cita no tiene medico con email.
-const STAFF_AVISOS = NOTIFY_TO.filter((e) => !/^alejandro@/i.test(e));
+const STAFF_AVISOS = NOTIFY_TO;
 // Enlace del correo a la pagina de respuesta (?cita&t&r). Crea el token si falta.
 async function enlacesCita(c: any): Promise<((r: string) => string) | null> {
   let token: string = c.confirm_token || "";
