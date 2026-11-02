@@ -1,4 +1,5 @@
-// notify — Supabase Edge Function (build 31oct-1)
+// notify — Supabase Edge Function (build 2nov-1)
+// 2nov-1: alejandro@ fuera de TODOS los avisos al staff (HIPAA).
 // 31oct-1: membresia cada 28 dias en los textos; los avisos de pagos al staff
 //   (pago, medicamento, renovacion declinada, receta aprobada) van a STAFF_AVISOS
 //   (sin alejandro@).
@@ -11,9 +12,13 @@
 // DEPLOY: slug swift-responder, --no-verify-jwt.
 
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+// 2nov-1 (Dra. Marrero, HIPAA): alejandro@ NO recibe NINGUN aviso de pacientes
+// (mensajes, citas, laboratorios, pagos...). Se filtra aqui, aunque el secret
+// NOTIFY_TO lo traiga, para que no dependa de que alguien cambie el secret.
 const NOTIFY_TO = (Deno.env.get("NOTIFY_TO")
-  ?? "alejandro@nuviclinic.com, drcampa@nuviclinic.com, drangelicamarrero@nuviclinic.com")
-  .split(",").map((e) => e.trim()).filter(Boolean);
+  ?? "drcampa@nuviclinic.com, drangelicamarrero@nuviclinic.com")
+  .split(",").map((e) => e.trim()).filter(Boolean)
+  .filter((e) => !/^alejandro@/i.test(e));
 const CLINIC_PHONE = Deno.env.get("CLINIC_PHONE") ?? "";
 const FROM       = "Nuvi Clinic <info@nuviclinic.com>";
 const SITE       = "https://nuviclinic.com";
