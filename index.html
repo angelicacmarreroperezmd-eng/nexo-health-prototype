@@ -7658,11 +7658,52 @@ if(!window.supabase){
     const on = o.tests.indexOf(t) >= 0;
     return '<button type="button" class="ol-test' + (on ? ' on' : '') + '" aria-pressed="' + on + '" onclick="ordenLabsToggle(\'' + q + '\')"><span class="ol-box"></span><span>' + escapeHtml(t) + '</span><small>CPT ' + cpt + '</small></button>';
   }
+  // Palabras en espanol para el buscador.
+  const LAB_ALIAS = {
+    'Comprehensive Metabolic Panel (CMP)': 'panel metabolico completo higado rinon electrolitos',
+    'Hemoglobin A1c (HbA1c)': 'hemoglobina glicosilada glucosilada azucar diabetes',
+    'Lipid Panel': 'perfil lipidos colesterol trigliceridos',
+    'CBC with Differential': 'hemograma conteo sangre',
+    'TSH': 'tiroides',
+    'Free T4': 'tiroides t4 libre',
+    'Free T3': 'tiroides t3 libre',
+    'Reverse T3': 'tiroides t3 reversa',
+    'Vitamin D, 25-Hydroxy': 'vitamina d',
+    'Vitamin B12': 'vitamina b12',
+    'Ferritin': 'ferritina hierro',
+    'Iron, Serum': 'hierro',
+    'Total Iron Binding Capacity (TIBC)': 'hierro',
+    'Amylase': 'amilasa pancreas',
+    'Lipase': 'lipasa pancreas',
+    'hs-CRP (high-sensitivity C-reactive protein)': 'proteina c reactiva inflamacion',
+    'Lipoprotein(a) [Lp(a)]': 'lipoproteina a',
+    'Apolipoprotein B (ApoB)': 'apolipoproteina b',
+    'Cystatin C': 'cistatina rinon',
+    'Urine Albumin/Creatinine Ratio (UACR)': 'orina albumina creatinina microalbumina rinon',
+    'Glucose, Serum, Fasting': 'glucosa serica ayunas azucar fbs',
+    'C-Peptide (same draw as glucose)': 'peptido c diabetes',
+    'GAD65 Antibodies': 'anticuerpos diabetes',
+    'IA-2 Antibodies': 'anticuerpos diabetes',
+    'Zinc Transporter 8 (ZnT8) Antibodies': 'anticuerpos diabetes',
+    'hCG, Serum (pregnancy)': 'embarazo prueba beta',
+    'Insulin, Fasting (for HOMA-IR)': 'insulina ayunas',
+    'Testosterone, Total': 'testosterona',
+    'Testosterone, Free': 'testosterona libre',
+    'Estradiol': 'estrogeno',
+    'Progesterone': 'progesterona',
+    'Prolactin': 'prolactina',
+    'Folate, Serum': 'acido folico folato',
+    'Magnesium, RBC': 'magnesio',
+    'ESR (Sedimentation Rate)': 'sedimentacion',
+    'PTH, Intact': 'paratiroides',
+    'Cortisol, AM (7–9 AM)': 'cortisol manana',
+    'Cortisol, PM (4–6 PM)': 'cortisol tarde'
+  };
   function ordenLabsResultadosHtml(o){
     const txt = (o.buscar || '').trim().toLowerCase();
     if(!txt) return '';
     const norm = v => v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const hits = LAB_TESTS.filter(t => norm(t[0] + ' ' + t[1]).indexOf(norm(txt)) >= 0).map(t => t[0]);
+    const hits = LAB_TESTS.filter(t => norm(t[0] + ' ' + t[1] + ' ' + (LAB_ALIAS[t[0]] || '')).indexOf(norm(txt)) >= 0).map(t => t[0]);
     return hits.length ? '<div class="ol-tests">' + hits.map(t => ordenLabsBotonPrueba(o, t)).join('') + '</div>'
       : '<p style="color:var(--ink-soft);font-size:13px;margin:0 0 10px;">No match. Type it in "Other" below.</p>';
   }
@@ -7688,7 +7729,7 @@ if(!window.supabase){
             ? '<div class="ol-sel-list">' + marcadas.map(n => '<button type="button" class="ol-pill" title="Remove" onclick="ordenLabsToggle(\'' + q(n) + '\')">' + escapeHtml(n) + '<span aria-hidden="true">\u00d7</span></button>').join('') + '</div>'
             : '<span style="color:var(--ink-soft);">No tests yet. Tap a quick panel above, search, or open a category.</span>')
       + '</div>'
-      + '<input type="search" id="ol-buscar" class="ol-buscar" data-i18n-skip placeholder="Search tests (lipase, A1c, TSH, C-peptide…)" value="' + escapeHtml(o.buscar || '').replace(/"/g, '&quot;') + '" oninput="ordenLabsBuscar(this.value)" autocomplete="off">'
+      + '<input type="search" id="ol-buscar" class="ol-buscar" data-i18n-skip placeholder="Search tests: lipase, A1c, embarazo, tiroides…" value="' + escapeHtml(o.buscar || '').replace(/"/g, '&quot;') + '" oninput="ordenLabsBuscar(this.value)" autocomplete="off">'
       + '<div id="ol-resultados" class="ol-resultados" data-i18n-skip>' + ordenLabsResultadosHtml(o) + '</div>'
       + '<div class="ol-catbar" data-i18n-skip style="margin-bottom:6px;"><span>Or browse by category</span></div>'
       + '<div class="ol-cats" data-i18n-skip>' + grupos.map((g, i) => {
