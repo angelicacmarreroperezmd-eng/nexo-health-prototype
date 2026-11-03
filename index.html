@@ -7547,7 +7547,7 @@ if(!window.supabase){
   let ordenLabs = null;   // lo que se está llenando en el formulario
 
   function ordenLabsAbrir(){
-    ordenLabs = { tests: [], other: '', icd1: ICD_DEFECTO, icd2: '', fasting: 'fasting', note: '', cats: [] };
+    ordenLabs = { tests: [], other: '', icd1: ICD_DEFECTO, icd2: '', icd3: '', icd4: '', fasting: 'fasting', note: '', cats: [] };
     ordenLabsPintar();
     const f = document.getElementById('orden-labs-form');
     f.hidden = false;
@@ -7587,16 +7587,29 @@ if(!window.supabase){
     g[1].forEach(n => { const i = ordenLabs.tests.indexOf(n); if(marcar && i < 0) ordenLabs.tests.push(n); if(!marcar && i >= 0) ordenLabs.tests.splice(i, 1); });
     ordenLabsPintar();
   }
+  // 3 nov 2026: hasta 4 diagnosticos por orden (antes 2).
+  const ICD_MAX = 4;
+  const ICD_KEYS = ['icd1', 'icd2', 'icd3', 'icd4'];
+  function icdLista(o){ return ICD_KEYS.map(k => ((o && o[k]) || '').trim()).filter(Boolean); }
+  function icdTiene(o, c){ return icdLista(o).indexOf(c) >= 0; }
+  // Pone el ICD en la primera casilla libre; si ya estaba, lo quita. false = no cabe.
+  function icdToggle(o, c){
+    const l = icdLista(o);
+    const i = l.indexOf(c);
+    if(i >= 0) l.splice(i, 1);
+    else if(l.length >= ICD_MAX){ alert('There are ' + ICD_MAX + ' diagnosis lines. Remove one first (tap it again or clear the box).'); return false; }
+    else l.push(c);
+    ICD_KEYS.forEach((k, j) => { o[k] = l[j] || ''; });
+    return true;
+  }
+  function icdLineasPapel(lista){
+    const n = Math.max(2, (lista || []).length);
+    return Array.from({ length: n }, (_, i) => '<div class="linea"><span>' + (i + 1) + '.</span> ' + escapeHtml((lista || [])[i] || '') + '</div>').join('');
+  }
   function ordenLabsIcd(i){
     const c = (LAB_ICDS[i] || [])[1];
     if(!ordenLabs || !c) return;
-    const o = ordenLabs;
-    if(o.icd1 === c){ o.icd1 = o.icd2; o.icd2 = ''; }
-    else if(o.icd2 === c){ o.icd2 = ''; }
-    else if(!(o.icd1 || '').trim()){ o.icd1 = c; }
-    else if(!(o.icd2 || '').trim()){ o.icd2 = c; }
-    else { alert('There are only two diagnosis lines. Remove one first (tap it again or clear the box).'); return; }
-    ordenLabsPintar();
+    if(icdToggle(ordenLabs, c)) ordenLabsPintar();
   }
   function ordenLabsLimpiar(){ if(ordenLabs){ ordenLabs.tests = []; ordenLabsPintar(); } }
 
@@ -7611,10 +7624,9 @@ if(!window.supabase){
       + ordenLabsPruebasHtml(o)
       + '<div class="nota-grid" data-i18n-skip>'
       + '<div class="nota-f"><label class="nota-l" for="ol-other">Other</label><input id="ol-other" value="' + val(o.other) + '" oninput="ordenLabsCampo(\'other\', this.value)"></div>'
-      + '<div class="nota-f half"><label class="nota-l" for="ol-icd1">Diagnosis (ICD-10) 1</label><input id="ol-icd1" value="' + val(o.icd1) + '" oninput="ordenLabsCampo(\'icd1\', this.value)"></div>'
-      + '<div class="nota-f half"><label class="nota-l" for="ol-icd2">Diagnosis (ICD-10) 2</label><input id="ol-icd2" value="' + val(o.icd2) + '" oninput="ordenLabsCampo(\'icd2\', this.value)"></div>'
+      + ICD_KEYS.map((k, j) => '<div class="nota-f half"><label class="nota-l" for="ol-' + k + '">Diagnosis (ICD-10) ' + (j + 1) + '</label><input id="ol-' + k + '" value="' + val(o[k]) + '" oninput="ordenLabsCampo(\'' + k + '\', this.value)"></div>').join('')
       + '<div class="nota-f"><span class="nota-l">Common diagnoses (tap to add or remove)</span><div class="nota-chips">'
-      +   LAB_ICDS.map((x, i) => '<button type="button" class="nota-chip' + (o.icd1 === x[1] || o.icd2 === x[1] ? ' on' : '') + '" title="' + val(x[1]) + '" onclick="ordenLabsIcd(' + i + ')">'
+      +   LAB_ICDS.map((x, i) => '<button type="button" class="nota-chip' + (icdTiene(o, x[1]) ? ' on' : '') + '" title="' + val(x[1]) + '" onclick="ordenLabsIcd(' + i + ')">'
             + escapeHtml(x[1].split(' ')[0]) + ' · ' + escapeHtml(x[0]) + '</button>').join('') + '</div></div>'
       + '<div class="nota-f"><span class="nota-l">Specimen instructions</span><div class="nota-chips">'
       +   '<button type="button" class="nota-chip' + (o.fasting === 'fasting' ? ' on' : '') + '" onclick="ordenLabsCampo(\'fasting\',\'fasting\')">Fasting 8–12 hours</button>'
@@ -7667,7 +7679,7 @@ if(!window.supabase){
     return {
       tests: LAB_TESTS.filter(t => o.tests.indexOf(t[0]) >= 0).map(t => ({ name: t[0], cpt: t[1] })),
       other_test: (o.other || '').trim() || null,
-      icd10: [o.icd1, o.icd2].map(x => (x || '').trim()).filter(Boolean),
+      icd10: icdLista(o),
       fasting: o.fasting,
       patient_note: (o.note || '').trim() || null
     };
@@ -7812,7 +7824,7 @@ if(!window.supabase){
 
   function referidoAbrir(){
     referido = { specialty:'', other:'', provider:'', phone:'', fax:'', urgency:'routine', service:'consult',
-      reason:'', icd1:'', icd2:'', attachments:[], note:'', atajo:'' };
+      reason:'', icd1:'', icd2:'', icd3:'', icd4:'', attachments:[], note:'', atajo:'' };
     referidoPintar();
     const f = document.getElementById('referido-form');
     f.hidden = false;
@@ -7837,12 +7849,7 @@ if(!window.supabase){
   // Pone el ICD en la primera casilla libre; si ya estaba, lo quita.
   function referidoIcd(codigo){
     if(!referido) return;
-    if(referido.icd1 === codigo){ referido.icd1 = referido.icd2; referido.icd2 = ''; }
-    else if(referido.icd2 === codigo){ referido.icd2 = ''; }
-    else if(!referido.icd1){ referido.icd1 = codigo; }
-    else if(!referido.icd2){ referido.icd2 = codigo; }
-    else { alert('There are only two diagnosis lines. Remove one first.'); return; }
-    referidoPintar();
+    if(icdToggle(referido, codigo)) referidoPintar();
   }
   function referidoAdjunto(n){
     if(!referido) return;
@@ -7876,9 +7883,8 @@ if(!window.supabase){
       +   Object.keys(REF_SERVICIOS).map(k => chip(r.service === k, 'referidoCampo(\'service\',\'' + k + '\')', REF_SERVICIOS[k])).join('') + '</div></div>'
       + '<div class="nota-f"><label class="nota-l" for="rf-reason">Reason for referral</label><textarea id="rf-reason" rows="3" oninput="referidoCampo(\'reason\', this.value)">' + escapeHtml(r.reason) + '</textarea></div>'
       + (atajo ? '<div class="nota-f"><span class="nota-l">Suggested diagnoses (tap to add)</span><div class="nota-chips">'
-          + atajo.icds.map(c => chip(r.icd1 === c || r.icd2 === c, 'referidoIcd(\'' + c.replace(/'/g, "\\'") + '\')', c)).join('') + '</div></div>' : '')
-      + inp('rf-icd1', 'icd1', 'Diagnosis (ICD-10) 1', 'half')
-      + inp('rf-icd2', 'icd2', 'Diagnosis (ICD-10) 2', 'half')
+          + atajo.icds.map(c => chip(icdTiene(r, c), 'referidoIcd(\'' + c.replace(/'/g, "\\'") + '\')', c)).join('') + '</div></div>' : '')
+      + ICD_KEYS.map((k, j) => inp('rf-' + k, k, 'Diagnosis (ICD-10) ' + (j + 1), 'half')).join('')
       + '<div class="nota-f"><span class="nota-l">Attached</span><div class="nota-chips">'
       +   REF_ADJUNTOS.map(a => chip(r.attachments.indexOf(a) >= 0, 'referidoAdjunto(\'' + a + '\')', a)).join('') + '</div></div>'
       + '</div>'
@@ -7898,7 +7904,7 @@ if(!window.supabase){
       provider_fax: (r.fax || '').trim() || null,
       urgency: r.urgency, service: r.service,
       reason: (r.reason || '').trim(),
-      icd10: [r.icd1, r.icd2].map(x => (x || '').trim()).filter(Boolean),
+      icd10: icdLista(r),
       attachments: REF_ADJUNTOS.filter(a => r.attachments.indexOf(a) >= 0),
       patient_note: (r.note || '').trim() || null
     };
@@ -8033,7 +8039,7 @@ if(!window.supabase){
     <h2>REASON FOR REFERRAL</h2>
     <div class="texto">${escapeHtml(r.reason || '')}</div>
     <h2>DIAGNOSIS (ICD-10)</h2>
-    ${[0, 1].map(i => '<div class="linea"><span>' + (i + 1) + '.</span> ' + escapeHtml((r.icd10 || [])[i] || '') + '</div>').join('')}
+    ${icdLineasPapel(r.icd10)}
     <h2>ATTACHED</h2>
     <div class="ops">${REF_ADJUNTOS.map(a => '<span>' + caja((r.attachments || []).indexOf(a) >= 0) + escapeHtml(a) + '</span>').join('')}</div>
     <div class="firma"><div><div class="l">${r.signed_at ? escapeHtml(nombreMed) + ' · electronically signed ' + new Date(r.signed_at).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : ''}</div><small>Physician signature</small></div>
@@ -8091,7 +8097,7 @@ if(!window.supabase){
       + '</div>';
     const filas = (larga ? '' : filasHoja.map(fila).join(''))
       + '<tr><td>' + caja(!!o.other_test) + 'Other' + (o.other_test ? ': <b>' + escapeHtml(o.other_test) + '</b>' : '') + '</td><td></td></tr>';
-    const icd = [0, 1].map(i => '<div class="linea"><span>' + (i + 1) + '.</span> ' + escapeHtml((o.icd10 || [])[i] || '') + '</div>').join('');
+    const icd = icdLineasPapel(o.icd10);
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Laboratory Order — ${escapeHtml(p.full_name || 'Patient')}</title>
 <style>
   @page{size:letter;margin:0;}
