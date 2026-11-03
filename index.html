@@ -7390,7 +7390,14 @@ if(!window.supabase){
     ['Coenzyme Q10', '82542', true],
     ['IGF-1', '84305', true],
     ['PTH, Intact', '83970', true],
-    ['Bone-Specific Alkaline Phosphatase', '84080', true]
+    ['Bone-Specific Alkaline Phosphatase', '84080', true],
+    // 3 nov 2026: clasificar diabetes nueva (tipo 1/LADA vs tipo 2) y hCG.
+    ['Glucose, Serum, Fasting', '82947', true],
+    ['C-Peptide (same draw as glucose)', '84681', true],
+    ['GAD65 Antibodies', '86341', true],
+    ['IA-2 Antibodies', '86341', true],
+    ['Zinc Transporter 8 (ZnT8) Antibodies', '86341', true],
+    ['hCG, Serum (pregnancy)', '84702', true]
   ];
   // 29 oct 2026: las pruebas se muestran por categoria (una pestana a la vez).
   // Cada prueba de LAB_TESTS va en UNA categoria; si se anade una prueba y no
@@ -7398,11 +7405,13 @@ if(!window.supabase){
   const LAB_GRUPOS = [
     ['Metabolic & lipids', ['Comprehensive Metabolic Panel (CMP)', 'Hemoglobin A1c (HbA1c)', 'Insulin, Fasting (for HOMA-IR)', 'Lipid Panel',
       'Apolipoprotein B (ApoB)', 'Lipoprotein(a) [Lp(a)]']],
+    ['Diabetes', ['Glucose, Serum, Fasting', 'C-Peptide (same draw as glucose)', 'GAD65 Antibodies', 'IA-2 Antibodies',
+      'Zinc Transporter 8 (ZnT8) Antibodies']],
     ['Blood & iron', ['CBC with Differential', 'Ferritin', 'Iron, Serum', 'Total Iron Binding Capacity (TIBC)']],
     ['Vitamins & minerals', ['Vitamin D, 25-Hydroxy', 'Vitamin B12', 'Folate, Serum', 'Magnesium, RBC', 'Zinc']],
     ['Thyroid', ['TSH', 'Free T4', 'Free T3', 'Reverse T3', 'Thyroid Peroxidase Antibodies (TPOAb)', 'Thyroglobulin Antibodies (TgAb)']],
     ['Sex hormones', ['Estradiol', 'Progesterone', 'Testosterone, Total', 'Testosterone, Free', 'SHBG (Sex Hormone-Binding Globulin)',
-      'DHEA-Sulfate (DHEA-S)', 'FSH (Follicle-Stimulating Hormone)', 'LH (Luteinizing Hormone)', 'Prolactin', 'PSA, Total']],
+      'DHEA-Sulfate (DHEA-S)', 'FSH (Follicle-Stimulating Hormone)', 'LH (Luteinizing Hormone)', 'Prolactin', 'PSA, Total', 'hCG, Serum (pregnancy)']],
     ['Adrenal', ['Cortisol, AM (7–9 AM)', 'Cortisol, PM (4–6 PM)', 'ACTH']],
     ['Inflammation', ['hs-CRP (high-sensitivity C-reactive protein)', 'Homocysteine', 'ESR (Sedimentation Rate)']],
     ['Kidney & pancreas', ['Cystatin C', 'Urine Albumin/Creatinine Ratio (UACR)', 'Amylase', 'Lipase']],
@@ -7434,6 +7443,10 @@ if(!window.supabase){
     // Aprobado por la Dra. Marrero (22 oct 2026). Lp(a) basta una vez en la vida.
     'Metabolic + longevity': ['Comprehensive Metabolic Panel (CMP)', 'Hemoglobin A1c (HbA1c)', 'Lipid Panel', 'CBC with Differential',
       'Apolipoprotein B (ApoB)', 'hs-CRP (high-sensitivity C-reactive protein)', 'Lipoprotein(a) [Lp(a)]', 'Cystatin C', 'Urine Albumin/Creatinine Ratio (UACR)'],
+    // 3 nov 2026: diabetes recien diagnosticada (A1c y lipidos ya hechos).
+    'New diabetes workup': ['Glucose, Serum, Fasting', 'C-Peptide (same draw as glucose)', 'GAD65 Antibodies', 'IA-2 Antibodies',
+      'Zinc Transporter 8 (ZnT8) Antibodies', 'Apolipoprotein B (ApoB)', 'Lipoprotein(a) [Lp(a)]', 'Lipase', 'TSH', 'Free T4',
+      'Urine Albumin/Creatinine Ratio (UACR)', 'CBC with Differential', 'hCG, Serum (pregnancy)'],
     'Hair loss / iron': ['CBC with Differential', 'Ferritin', 'Iron, Serum', 'Total Iron Binding Capacity (TIBC)', 'Vitamin D, 25-Hydroxy', 'Vitamin B12', 'TSH'],
     // Basico antes de terapia hormonal en menopausia (>=45 con sintomas: el
     // diagnostico es clinico, sin FSH/estradiol). Aprobado 28 oct 2026.
@@ -7473,6 +7486,8 @@ if(!window.supabase){
     ['Type 2 diabetes', 'E11.9 Type 2 diabetes mellitus without complications'],
     ['Metabolic syndrome', 'E88.810 Metabolic syndrome'],
     ['Hyperlipidemia', 'E78.5 Hyperlipidemia, unspecified'],
+    ['Hypertriglyceridemia', 'E78.1 Pure hyperglyceridemia'],
+    ['Hx of pancreatitis', 'Z87.19 Personal history of other diseases of the digestive system'],
     ['Fatty liver', 'K76.0 Fatty (change of) liver, not elsewhere classified'],
     ['Hypothyroidism', 'E03.9 Hypothyroidism, unspecified'],
     ['Menopause symptoms', 'N95.1 Menopausal and female climacteric states'],
