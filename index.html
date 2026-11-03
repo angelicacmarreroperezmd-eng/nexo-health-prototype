@@ -7857,6 +7857,7 @@ if(!window.supabase){
       p = r.data || {};
     }
     auditarAcceso(o.patient_user_id, 'print_order', o.id);   // la base ignora esto si no es personal
+    await cargarFirma(o.author_user_id);
     imprimirOrdenLabs(o, p, false);
   }
 
@@ -8073,9 +8074,24 @@ if(!window.supabase){
       p = (q.data && q.data[0]) || {};
     }
     auditarAcceso(r.patient_user_id, 'print_order', r.id);
+    await cargarFirma(r.author_user_id);
     imprimirReferido(r, p, false);
   }
 
+  // 3 nov 2026: firma escaneada del medico (tabla staff_signatures; no va en
+  // el codigo porque el repo es publico). Solo sale en documentos ya firmados.
+  const FIRMAS = {};
+  async function cargarFirma(uid){
+    if(!uid || uid in FIRMAS) return;
+    try{
+      const { data } = await supabaseClient.from('staff_signatures').select('image').eq('staff_user_id', uid).maybeSingle();
+      FIRMAS[uid] = (data && /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(data.image)) ? data.image : '';
+    }catch(e){ FIRMAS[uid] = ''; }
+  }
+  function firmaImg(d){
+    const src = d && d.signed_at && FIRMAS[d.author_user_id];
+    return src ? '<img src="' + src + '" alt="Signature" style="display:block;height:48px;max-width:230px;margin:0 0 2px 2px;">' : '';
+  }
   function imprimirReferido(r, p, borrador){
     const logoEl = document.querySelector('.logo img');
     const logo = logoEl ? logoEl.src : '';
@@ -8132,7 +8148,7 @@ if(!window.supabase){
     ${icdLineasPapel(r.icd10)}
     <h2>ATTACHED</h2>
     <div class="ops">${REF_ADJUNTOS.map(a => '<span>' + caja((r.attachments || []).indexOf(a) >= 0) + escapeHtml(a) + '</span>').join('')}</div>
-    <div class="firma"><div><div class="l">${r.signed_at ? escapeHtml(nombreMed) + ' · electronically signed ' + new Date(r.signed_at).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : ''}</div><small>Physician signature</small></div>
+    <div class="firma"><div>${firmaImg(r)}<div class="l">${r.signed_at ? escapeHtml(nombreMed) + ' · electronically signed ' + new Date(r.signed_at).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : ''}</div><small>Physician signature</small></div>
       <div style="flex:.6"><div class="l">${escapeHtml(r.author_npi || '')}</div><small>NPI</small></div>
       <div style="flex:.6"><div class="l">${escapeHtml(r.author_license || '')}</div><small>Medical license</small></div></div>
   </div>
@@ -8226,7 +8242,7 @@ if(!window.supabase){
     <h2>DIAGNOSIS (ICD-10)</h2>${icd}
     <h2>SPECIMEN INSTRUCTIONS</h2>
     <div class="ayuno"><span>${caja(o.fasting === 'fasting')}Fasting 8–12 hours</span><span>${caja(o.fasting === 'non_fasting')}Non-fasting OK</span></div>
-    <div class="firma"><div><div class="l">${o.signed_at ? escapeHtml(nombreMed) + ' · electronically signed ' + new Date(o.signed_at).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : ''}</div><small>Physician signature</small></div>
+    <div class="firma"><div>${firmaImg(o)}<div class="l">${o.signed_at ? escapeHtml(nombreMed) + ' · electronically signed ' + new Date(o.signed_at).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : ''}</div><small>Physician signature</small></div>
       <div style="flex:.6"><div class="l">${escapeHtml(o.author_npi || '')}</div><small>NPI</small></div>
       <div style="flex:.6"><div class="l">${escapeHtml(o.author_license || '')}</div><small>Medical license</small></div></div>
   </div>
@@ -8629,6 +8645,7 @@ if(!window.supabase){
       p = (q.data && q.data[0]) || {};
     }
     auditarAcceso(r.patient_user_id, 'print_order', r.id);
+    await cargarFirma(r.author_user_id);
     imprimirRxApoyo(r, p, false);
   }
 
@@ -8674,7 +8691,7 @@ if(!window.supabase){
     ${r.pharmacy ? '<div class="campo"><label>Pharmacy</label><div>' + escapeHtml(r.pharmacy) + '</div></div>' : ''}
     <div class="rxsym">℞</div>
     ${items}
-    <div class="firma"><div><div class="l">${r.signed_at ? escapeHtml(nombreMed) + ' · electronically signed ' + new Date(r.signed_at).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : ''}</div><small>Physician signature</small></div>
+    <div class="firma"><div>${firmaImg(r)}<div class="l">${r.signed_at ? escapeHtml(nombreMed) + ' · electronically signed ' + new Date(r.signed_at).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : ''}</div><small>Physician signature</small></div>
       <div style="flex:.6"><div class="l">${escapeHtml(r.author_npi || '')}</div><small>NPI</small></div>
       <div style="flex:.6"><div class="l">${escapeHtml(r.author_license || '')}</div><small>Medical license</small></div></div>
     <div class="valida">Valid only with the prescriber's signature. Verification: ${CLINICA_TEL}.${anulada ? ' <b style="color:#B23A3A;">This prescription was voided and is not valid.</b>' : ''}</div>
