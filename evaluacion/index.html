@@ -3,6 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google Analytics (GA4) — 2 nov 2026. SOLO paginas publicas.
+     HIPAA: nunca se carga con sesion abierta (portal de paciente o medico),
+     ni en enlaces de correo (cita, pago, tokens). Se manda solo la ruta, sin
+     query string, y sin Google Signals ni personalizacion de anuncios. Al
+     entrar al portal se apaga (ver nuviGaApagar). -->
+<script>
+(function(){
+  var ID = 'G-HEY7X4LEPN';
+  window.nuviGaApagar = function(){ window['ga-disable-' + ID] = true; };
+  var q = (location.search || '') + (location.hash || '');
+  if(/cita=|access_token|refresh_token|token|code=|pagar=|renovar=|metodo=|error/i.test(q)) return;
+  try{ for(var i = 0; i < localStorage.length; i++){ if(/^sb-.*-auth-token$/.test(localStorage.key(i))) return; } }catch(e){}
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  window.gtag = gtag;
+  gtag('js', new Date());
+  var ref = ''; try{ ref = document.referrer ? new URL(document.referrer).origin : ''; }catch(e){}
+  gtag('config', ID, { page_location: location.origin + location.pathname, page_referrer: ref,
+    allow_google_signals: false, allow_ad_personalization_signals: false });
+  var s = document.createElement('script'); s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + ID;
+  document.head.appendChild(s);
+})();
+</script>
 <title>Evaluación médica para manejo de peso | NuVi Clinic</title>
 <meta name="description" content="Evaluación médica virtual para manejo de peso en Puerto Rico. Te atiende un médico licenciado por video y te da un plan personalizado con seguimiento. Membresía $50 al mes.">
 <link rel="canonical" href="https://nuviclinic.com/evaluacion/">
