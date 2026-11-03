@@ -1092,7 +1092,11 @@ if(!window.supabase){
   .ol-cat.on em{background:rgba(255,255,255,0.25);}
   .ol-catbar{display:flex;gap:12px;align-items:center;margin:0 0 8px;font-size:12.5px;color:var(--ink-soft);}
   .ol-link{appearance:none;background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--ink);text-decoration:underline;cursor:pointer;}
-  .ol-sel{background:#F2F5FA;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;}
+  .ol-sel{background:#F2F5FA;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;
+    position:sticky;top:8px;z-index:3;box-shadow:0 4px 14px rgba(14,42,74,0.08);max-height:40vh;overflow:auto;}
+  .ol-buscar{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;margin-bottom:8px;}
+  .ol-resultados .ol-tests{margin-bottom:10px;}
+  .ol-top .nota-chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
   .ol-sel-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
   .ol-sel-list{display:flex;flex-wrap:wrap;gap:6px;}
   .ol-pill{appearance:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--white);border-radius:100px;padding:4px 10px;font:inherit;font-size:12.5px;cursor:pointer;color:var(--ink);}
@@ -7564,8 +7568,16 @@ if(!window.supabase){
     if(i >= 0) ordenLabs.tests.splice(i, 1); else ordenLabs.tests.push(nombre);
     ordenLabsPintar();
   }
+  // 3 nov 2026: un atajo ya puesto se quita con otro toque.
+  function ordenLabsPresetOn(k){ return !!ordenLabs && LAB_PRESETS[k].every(n => ordenLabs.tests.indexOf(n) >= 0); }
   function ordenLabsPreset(k){
     if(!ordenLabs) return;
+    if(ordenLabsPresetOn(k)){
+      ordenLabs.tests = ordenLabs.tests.filter(n => LAB_PRESETS[k].indexOf(n) < 0);
+      if(LAB_PRESET_NOTAS[k] && ordenLabs.note === LAB_PRESET_NOTAS[k]) ordenLabs.note = '';
+      ordenLabsPintar();
+      return;
+    }
     LAB_PRESETS[k].forEach(n => { if(ordenLabs.tests.indexOf(n) < 0) ordenLabs.tests.push(n); });
     if(LAB_PRESET_NOTAS[k] && !(ordenLabs.note || '').trim()) ordenLabs.note = LAB_PRESET_NOTAS[k];
     ordenLabsPintar();
@@ -7619,7 +7631,7 @@ if(!window.supabase){
     const o = ordenLabs;
     const val = v => escapeHtml(v || '').replace(/"/g, '&quot;');
     f.innerHTML = '<div class="ol-top"><b>Order labs</b><span>Quick:</span>'
-      + Object.keys(LAB_PRESETS).map(k => '<button type="button" class="nota-chip" onclick="ordenLabsPreset(\'' + k + '\')">' + escapeHtml(k) + '</button>').join('')
+      + Object.keys(LAB_PRESETS).map(k => '<button type="button" class="nota-chip' + (ordenLabsPresetOn(k) ? ' on' : '') + '" aria-pressed="' + ordenLabsPresetOn(k) + '" onclick="ordenLabsPreset(\'' + k + '\')">' + escapeHtml(k) + '</button>').join('')
       + '</div>'
       + ordenLabsPruebasHtml(o)
       + '<div class="nota-grid" data-i18n-skip>'
@@ -7639,6 +7651,28 @@ if(!window.supabase){
       + '<p class="nota-legal" style="margin:8px 0 0;">When sent, the patient sees "Labs requested — upload your results" with these tests and can download the order as a PDF.</p>';
   }
 
+  // 3 nov 2026: buscar pruebas por nombre o CPT sin abrir categorias.
+  function ordenLabsBotonPrueba(o, t){
+    const q = t.replace(/'/g, "\\'");
+    const cpt = (LAB_TESTS.find(x => x[0] === t) || [])[1] || '';
+    const on = o.tests.indexOf(t) >= 0;
+    return '<button type="button" class="ol-test' + (on ? ' on' : '') + '" aria-pressed="' + on + '" onclick="ordenLabsToggle(\'' + q + '\')"><span class="ol-box"></span><span>' + escapeHtml(t) + '</span><small>CPT ' + cpt + '</small></button>';
+  }
+  function ordenLabsResultadosHtml(o){
+    const txt = (o.buscar || '').trim().toLowerCase();
+    if(!txt) return '';
+    const norm = v => v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const hits = LAB_TESTS.filter(t => norm(t[0] + ' ' + t[1]).indexOf(norm(txt)) >= 0).map(t => t[0]);
+    return hits.length ? '<div class="ol-tests">' + hits.map(t => ordenLabsBotonPrueba(o, t)).join('') + '</div>'
+      : '<p style="color:var(--ink-soft);font-size:13px;margin:0 0 10px;">No match. Type it in "Other" below.</p>';
+  }
+  function ordenLabsBuscar(v){
+    if(!ordenLabs) return;
+    ordenLabs.buscar = v;
+    const r = document.getElementById('ol-resultados');
+    if(r) r.innerHTML = ordenLabsResultadosHtml(ordenLabs);
+  }
+
   // Pestanas de categoria + las pruebas de la pestana abierta + lo marcado.
   function ordenLabsPruebasHtml(o){
     const grupos = labGrupos();
@@ -7647,7 +7681,16 @@ if(!window.supabase){
     const cpt = n => (LAB_TESTS.find(t => t[0] === n) || [])[1] || '';
     const marcadas = LAB_TESTS.map(t => t[0]).filter(n => o.tests.indexOf(n) >= 0);
     const abiertas = grupos.map((g, i) => [g, i]).filter(x => o.cats.indexOf(x[0][0]) >= 0);
-    return '<div class="ol-catbar" data-i18n-skip style="margin-bottom:6px;"><span>Categories — tap one or more to see their tests</span></div>'
+    return ''
+      + '<div class="ol-sel" data-i18n-skip><div class="ol-sel-top"><b>Selected (' + marcadas.length + ')</b>'
+      +   (marcadas.length ? '<button type="button" class="ol-link" onclick="ordenLabsLimpiar()">Clear all</button>' : '') + '</div>'
+      +   (marcadas.length
+            ? '<div class="ol-sel-list">' + marcadas.map(n => '<button type="button" class="ol-pill" title="Remove" onclick="ordenLabsToggle(\'' + q(n) + '\')">' + escapeHtml(n) + '<span aria-hidden="true">\u00d7</span></button>').join('') + '</div>'
+            : '<span style="color:var(--ink-soft);">No tests yet. Tap a quick panel above, search, or open a category.</span>')
+      + '</div>'
+      + '<input type="search" id="ol-buscar" class="ol-buscar" data-i18n-skip placeholder="Search tests (lipase, A1c, TSH, C-peptide…)" value="' + escapeHtml(o.buscar || '').replace(/"/g, '&quot;') + '" oninput="ordenLabsBuscar(this.value)" autocomplete="off">'
+      + '<div id="ol-resultados" class="ol-resultados" data-i18n-skip>' + ordenLabsResultadosHtml(o) + '</div>'
+      + '<div class="ol-catbar" data-i18n-skip style="margin-bottom:6px;"><span>Or browse by category</span></div>'
       + '<div class="ol-cats" data-i18n-skip>' + grupos.map((g, i) => {
           const n = g[1].filter(x => o.tests.indexOf(x) >= 0).length, on = o.cats.indexOf(g[0]) >= 0;
           return '<button type="button" aria-pressed="' + on + '" class="ol-cat' + (on ? ' on' : '') + '" onclick="ordenLabsCat(' + i + ')">'
@@ -7666,12 +7709,7 @@ if(!window.supabase){
                 + ' onclick="ordenLabsToggle(\'' + q(t) + '\')"><span class="ol-box"></span><span>' + escapeHtml(t) + '</span><small>CPT ' + cpt(t) + '</small></button>').join('')
             + '</div></div>';
         }).join('')
-      + '<div class="ol-sel" data-i18n-skip><div class="ol-sel-top"><b>Selected (' + marcadas.length + ')</b>'
-      +   (marcadas.length ? '<button type="button" class="ol-link" onclick="ordenLabsLimpiar()">Clear all</button>' : '') + '</div>'
-      +   (marcadas.length
-            ? '<div class="ol-sel-list">' + marcadas.map(n => '<button type="button" class="ol-pill" title="Remove" onclick="ordenLabsToggle(\'' + q(n) + '\')">' + escapeHtml(n) + '<span aria-hidden="true">\u00d7</span></button>').join('') + '</div>'
-            : '<span style="color:var(--ink-soft);">No tests yet. Tap a quick panel above, or open a category.</span>')
-      + '</div>';
+      + '';
   }
 
   function ordenLabsFila(){
