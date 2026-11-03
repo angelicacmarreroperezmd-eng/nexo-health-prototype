@@ -5803,6 +5803,14 @@ if(!window.supabase){
   function nuviOpenModal(name, plan){
     document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open'));
 
+    // 2 nov 2026: "lead" anonimo para Google Analytics: alguien abrio el
+    // registro desde la parte publica. Una vez por pagina, sin datos de la
+    // persona ni del formulario. Con sesion abierta GA ni siquiera carga.
+    if(name === 'intake' && !window.__nuviLeadEnviado && typeof window.gtag === 'function'){
+      window.__nuviLeadEnviado = true;
+      try{ window.gtag('event', 'generate_lead'); }catch(e){}
+    }
+
     // Pidio un codigo hace poco y cerro la ventana (o recargo): volver al
     // paso del codigo en vez de hacerle pedir otro.
     if(name === 'login' && codigoPendiente()){ mostrarPasoCodigo(); return; }
