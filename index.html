@@ -1093,9 +1093,14 @@ if(!window.supabase){
   .ol-catbar{display:flex;gap:12px;align-items:center;margin:0 0 8px;font-size:12.5px;color:var(--ink-soft);}
   .ol-link{appearance:none;background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--ink);text-decoration:underline;cursor:pointer;}
   .ol-sel{background:#F2F5FA;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;
-    position:sticky;top:8px;z-index:3;box-shadow:0 4px 14px rgba(14,42,74,0.08);max-height:40vh;overflow:auto;}
+}
   .ol-buscar{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;margin-bottom:8px;}
   .ol-resultados .ol-tests{margin-bottom:10px;}
+  .ol-lista{max-height:340px;overflow:auto;padding:2px;}
+  .ol-lista .ol-tests{margin-bottom:0;}
+  .ol-letras{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+  .ol-letra{appearance:none;border:1px solid var(--line);background:var(--white);border-radius:6px;min-width:28px;padding:3px 7px;font:inherit;font-size:12px;cursor:pointer;color:var(--ink);}
+  .ol-letra.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600;}
   .ol-top .nota-chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
   .ol-sel-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
   .ol-sel-list{display:flex;flex-wrap:wrap;gap:6px;}
@@ -7566,7 +7571,10 @@ if(!window.supabase){
     if(!ordenLabs) return;
     const i = ordenLabs.tests.indexOf(nombre);
     if(i >= 0) ordenLabs.tests.splice(i, 1); else ordenLabs.tests.push(nombre);
+    // Repinta todo pero conserva el scroll de la lista.
+    const l = document.getElementById('ol-resultados'), y = l ? l.scrollTop : 0;
     ordenLabsPintar();
+    const l2 = document.getElementById('ol-resultados'); if(l2) l2.scrollTop = y;
   }
   // 3 nov 2026: un atajo ya puesto se quita con otro toque.
   function ordenLabsPresetOn(k){ return !!ordenLabs && LAB_PRESETS[k].every(n => ordenLabs.tests.indexOf(n) >= 0); }
@@ -7711,47 +7719,50 @@ if(!window.supabase){
     if(!ordenLabs) return;
     ordenLabs.buscar = v;
     const r = document.getElementById('ol-resultados');
-    if(r) r.innerHTML = ordenLabsResultadosHtml(ordenLabs);
+    if(r) r.innerHTML = ordenLabsListaHtml(ordenLabs);
   }
 
   // Pestanas de categoria + las pruebas de la pestana abierta + lo marcado.
-  function ordenLabsPruebasHtml(o){
-    const grupos = labGrupos();
-    o.cats = (o.cats || []).filter(c => grupos.some(g => g[0] === c));
-    const q = n => n.replace(/'/g, "\\'");
-    const cpt = n => (LAB_TESTS.find(t => t[0] === n) || [])[1] || '';
-    const marcadas = LAB_TESTS.map(t => t[0]).filter(n => o.tests.indexOf(n) >= 0);
-    const abiertas = grupos.map((g, i) => [g, i]).filter(x => o.cats.indexOf(x[0][0]) >= 0);
-    return ''
-      + '<div class="ol-sel" data-i18n-skip><div class="ol-sel-top"><b>Selected (' + marcadas.length + ')</b>'
-      +   (marcadas.length ? '<button type="button" class="ol-link" onclick="ordenLabsLimpiar()">Clear all</button>' : '') + '</div>'
-      +   (marcadas.length
-            ? '<div class="ol-sel-list">' + marcadas.map(n => '<button type="button" class="ol-pill" title="Remove" onclick="ordenLabsToggle(\'' + q(n) + '\')">' + escapeHtml(n) + '<span aria-hidden="true">\u00d7</span></button>').join('') + '</div>'
-            : '<span style="color:var(--ink-soft);">No tests yet. Tap a quick panel above, search, or open a category.</span>')
-      + '</div>'
-      + '<input type="search" id="ol-buscar" class="ol-buscar" data-i18n-skip placeholder="Search tests: lipase, A1c, embarazo, tiroides…" value="' + escapeHtml(o.buscar || '').replace(/"/g, '&quot;') + '" oninput="ordenLabsBuscar(this.value)" autocomplete="off">'
-      + '<div id="ol-resultados" class="ol-resultados" data-i18n-skip>' + ordenLabsResultadosHtml(o) + '</div>'
-      + '<div class="ol-catbar" data-i18n-skip style="margin-bottom:6px;"><span>Or browse by category</span></div>'
-      + '<div class="ol-cats" data-i18n-skip>' + grupos.map((g, i) => {
-          const n = g[1].filter(x => o.tests.indexOf(x) >= 0).length, on = o.cats.indexOf(g[0]) >= 0;
-          return '<button type="button" aria-pressed="' + on + '" class="ol-cat' + (on ? ' on' : '') + '" onclick="ordenLabsCat(' + i + ')">'
-            + escapeHtml(g[0]) + (n ? '<em>' + n + '</em>' : '') + '</button>';
-        }).join('') + '</div>'
-      + abiertas.map(x => {
-          const g = x[0], i = x[1];
-          const n = g[1].filter(y => o.tests.indexOf(y) >= 0).length;
-          return '<div class="ol-grupo" data-i18n-skip><div class="ol-catbar"><b style="color:var(--ink);font-size:13.5px;">' + escapeHtml(g[0]) + '</b>'
-            + '<span>' + n + ' of ' + g[1].length + ' selected</span>'
-            + (n < g[1].length ? '<button type="button" class="ol-link" onclick="ordenLabsCatTodas(' + i + ', true)">Select all</button>' : '')
-            + (n ? '<button type="button" class="ol-link" onclick="ordenLabsCatTodas(' + i + ', false)">Deselect all</button>' : '')
-            + '<button type="button" class="ol-link" style="margin-left:auto;" onclick="ordenLabsCat(' + i + ')">Close</button></div>'
-            + '<div class="ol-tests">' + g[1].map(t =>
-                '<button type="button" class="ol-test' + (o.tests.indexOf(t) >= 0 ? ' on' : '') + '" aria-pressed="' + (o.tests.indexOf(t) >= 0) + '"'
-                + ' onclick="ordenLabsToggle(\'' + q(t) + '\')"><span class="ol-box"></span><span>' + escapeHtml(t) + '</span><small>CPT ' + cpt(t) + '</small></button>').join('')
-            + '</div></div>';
-        }).join('')
-      + '';
+  // 3 nov 2026 (pedido de la Dra. Marrero): UNA sola lista con todas las
+  // pruebas, de la A a la Z, con su casilla. Los atajos marcan aqui mismo y se
+  // marca o desmarca cualquiera sin bajar. Buscar filtra letra por letra.
+  function ordenLabsListaHtml(o){
+    const norm = v => (v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const txt = norm((o.buscar || '').trim());
+    let lista = LAB_TESTS.map(t => t[0]).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
+    if(o.letra) lista = lista.filter(n => norm(n).charAt(0) === o.letra);
+    if(txt) lista = lista.filter(n => norm(n + ' ' + ((LAB_TESTS.find(t => t[0] === n) || [])[1] || '') + ' ' + (LAB_ALIAS[n] || '')).indexOf(txt) >= 0);
+    if(o.soloSel) lista = lista.filter(n => o.tests.indexOf(n) >= 0);
+    return lista.length ? '<div class="ol-tests">' + lista.map(t => ordenLabsBotonPrueba(o, t)).join('') + '</div>'
+      : '<p style="color:var(--ink-soft);font-size:13px;margin:6px 0 10px;">' + (o.soloSel ? 'Nothing selected yet.' : 'No match. Type it in "Other" below.') + '</p>';
   }
+  function ordenLabsPruebasHtml(o){
+    const norm = v => (v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const letras = Array.from(new Set(LAB_TESTS.map(t => norm(t[0]).charAt(0)))).sort();
+    const n = o.tests.length;
+    const chip = (on, js, txt) => '<button type="button" class="ol-letra' + (on ? ' on' : '') + '" onclick="' + js + '">' + txt + '</button>';
+    return '<div class="ol-sel" data-i18n-skip>'
+      + '<div class="ol-sel-top"><b>Tests <span style="font-weight:500;color:var(--ink-soft);">· ' + n + ' selected</span></b>'
+      +   '<span style="display:flex;gap:12px;align-items:center;">'
+      +   '<label style="display:flex;gap:5px;align-items:center;cursor:pointer;"><input type="checkbox"' + (o.soloSel ? ' checked' : '') + ' onchange="ordenLabsCampoLista(\'soloSel\', this.checked)"> Only selected</label>'
+      +   (n ? '<button type="button" class="ol-link" onclick="ordenLabsLimpiar()">Clear all</button>' : '') + '</span></div>'
+      + '<input type="search" id="ol-buscar" class="ol-buscar" placeholder="Search: lipase, A1c, embarazo, tiroides…" value="' + escapeHtml(o.buscar || '').replace(/"/g, '&quot;') + '" oninput="ordenLabsBuscar(this.value)" autocomplete="off">'
+      + '<div class="ol-letras">' + chip(!o.letra, 'ordenLabsCampoLista(\'letra\', \'\')', 'All')
+      +   letras.map(l => chip(o.letra === l, 'ordenLabsCampoLista(\'letra\', \'' + l + '\')', l.toUpperCase())).join('') + '</div>'
+      + '<div id="ol-resultados" class="ol-lista">' + ordenLabsListaHtml(o) + '</div>'
+      + '</div>';
+  }
+  function ordenLabsCampoLista(k, v){
+    if(!ordenLabs) return;
+    ordenLabs[k] = v;
+    const r = document.getElementById('ol-resultados');
+    if(r) r.innerHTML = ordenLabsListaHtml(ordenLabs);
+    document.querySelectorAll('.ol-letra').forEach(b => {
+      const t = b.textContent;
+      b.classList.toggle('on', k === 'letra' ? ((t === 'All' && !v) || t.toLowerCase() === v) : b.classList.contains('on'));
+    });
+  }
+
 
   function ordenLabsFila(){
     const o = ordenLabs;
