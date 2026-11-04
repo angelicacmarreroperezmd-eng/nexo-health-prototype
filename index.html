@@ -11588,6 +11588,7 @@ if(!window.supabase){
     if(typeof refreshChatBubble === 'function') refreshChatBubble();
     document.getElementById('np-dashboard').classList.add('visible');
     try{ window.nuviGaApagar && window.nuviGaApagar(); }catch(e){}
+    npHistorialBase();
     document.getElementById('nav-cta').style.display = 'none';
     document.getElementById('np-welcome').textContent = staffWelcome(staffRow);
     // Deja en la consola lo que la app RECIBIO de verdad. Sin esto, "no me
@@ -16995,6 +16996,58 @@ if(!window.supabase){
   // unirse = true (botón "Join" del Inicio): la ficha se abre y entra sola a
   // la videollamada de la cita vigente del paciente (misma regla de siempre:
   // npJoin relee la cita, así que cae en la misma sala que el paciente).
+  // ===== 4 nov 2026: botón Atrás en el portal de proveedores =====
+  // Antes el portal no tenía pasos en el historial: Atrás sacaba al médico
+  // del portal (a la página anterior). Ahora: Atrás cierra lo que esté
+  // abierto (ficha, ventana); si no hay nada abierto, se queda en el portal
+  // y avisa. Un segundo Atrás en menos de 3 segundos sí sale.
+  let npDesdeAtras = false, npUltimoAtras = 0;
+  function npHistorialBase(){
+    try{
+      if(history.state && history.state.nv) return;
+      history.replaceState({ nv:'base' }, '', location.href);
+      history.pushState({ nv:'dash' }, '', location.href);
+    }catch(e){}
+  }
+  function npAvisoAtras(){
+    let t = document.getElementById('np-aviso-atras');
+    if(!t){
+      t = document.createElement('div'); t.id = 'np-aviso-atras';
+      t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0E2A4A;color:#fff;padding:10px 16px;border-radius:100px;font-size:13.5px;z-index:99999;box-shadow:0 10px 28px -12px rgba(0,0,0,.5);max-width:90vw;text-align:center;';
+      document.body.appendChild(t);
+    }
+    t.textContent = 'Para salir del portal, toca Atrás otra vez o usa Cerrar sesión.';
+    t.style.display = 'block';
+    clearTimeout(t._h); t._h = setTimeout(function(){ t.style.display = 'none'; }, 3000);
+  }
+  window.addEventListener('popstate', function(ev){
+    const dash = document.getElementById('np-dashboard');
+    if(!dash || !dash.classList.contains('visible')) return;
+    const st = ev.state || {};
+    // 1) La ficha abierta se cierra.
+    if(fichaEnPagina && st.nv !== 'ficha'){
+      npDesdeAtras = true;
+      try{ cerrarFichaPagina(); } finally { npDesdeAtras = false; }
+      if(st.nv === 'base'){ try{ history.pushState({ nv:'dash' }, '', location.href); }catch(e){} }
+      return;
+    }
+    // 2) Una ventana abierta (modal) se cierra.
+    const abierta = document.querySelector('.modal-overlay.open');
+    if(abierta && abierta.id && abierta.id.indexOf('modal-') === 0){
+      try{ nuviCloseModal(abierta.id.slice(6)); }catch(e){ abierta.classList.remove('open'); }
+      if(st.nv === 'base'){ try{ history.pushState({ nv:'dash' }, '', location.href); }catch(e){} }
+      return;
+    }
+    // 3) Nada abierto: se queda, salvo doble Atrás.
+    if(st.nv === 'base'){
+      const ahora = Date.now();
+      if(ahora - npUltimoAtras < 3000){ npUltimoAtras = 0; try{ history.back(); }catch(e){} return; }
+      npUltimoAtras = ahora;
+      try{ history.pushState({ nv:'dash' }, '', location.href); }catch(e){}
+      npAvisoAtras();
+    }
+  });
+
   function abrirFichaPaciente(patientId, unirse){
     if(!patientId) return;
     let win = null;
@@ -17019,6 +17072,7 @@ if(!window.supabase){
   async function abrirFichaAqui(patientId){
     if(!patientId) return;
     fichaEnPagina = true;
+    try{ if(!(history.state && history.state.nv === 'ficha')) history.pushState({ nv:'ficha' }, '', location.href); }catch(e){}
     document.body.classList.add('ficha-pagina');
     const barra = document.getElementById('ficha-barra');
     if(barra) barra.style.display = 'flex';
@@ -17179,6 +17233,9 @@ if(!window.supabase){
   }
 
   function cerrarFichaPagina(){
+    // 4 nov 2026: si la ficha tiene su paso en el historial, se cierra
+    // "yendo atrás", así el botón Atrás del navegador y este quedan iguales.
+    if(!npDesdeAtras && history.state && history.state.nv === 'ficha'){ try{ history.back(); return; }catch(e){} }
     // Si hay llamada, se cierra limpio antes de irse.
     const videoWrap = document.getElementById('np-video-wrap');
     if(videoWrap && videoWrap.style.display !== 'none'){
