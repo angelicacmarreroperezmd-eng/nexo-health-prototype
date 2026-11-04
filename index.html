@@ -13,7 +13,12 @@
     var q = location.search || '';
     if(location.pathname !== '/' ) return;
     if(!/[?&](fbclid|igshid)=|[?&]utm_source=(ig|fb|facebook|instagram|meta)(&|$)/i.test(q)) return;
-    if(/(token|cita|pagar|code|type=|error)/i.test(q + location.hash)) return;
+    // Solo si TODOS los parametros son de rastreo. Si hay otro (p. ej.
+    // evaluar=1, que viene del boton de /evaluacion), se queda aqui: si no,
+    // daria vueltas entre las dos paginas.
+    var claves = q.replace(/^\?/, '').split('&').map(function(x){ return decodeURIComponent(x.split('=')[0] || '').toLowerCase(); }).filter(Boolean);
+    if(!claves.every(function(k){ return /^(fbclid|igshid|mibextid|utm_[a-z_]+)$/.test(k); })) return;
+    if(location.hash && location.hash.length > 1) return;
     for(var i = 0; i < localStorage.length; i++){ if(/^sb-.*-auth-token$/.test(localStorage.key(i))) return; }
     location.replace('/evaluacion/' + q);
   }catch(e){}
