@@ -2864,7 +2864,7 @@ if(!window.supabase){
             <p class="nota-legal" style="margin:8px 0 0;">They sign in at nuviclinic.com with this email (we send them a code) and complete their health history and consent. They never see a payment screen.</p>
           </div>
           <div style="margin-bottom:12px;">
-            <input id="np-patient-search" type="search" placeholder="Search patients by name or email…"
+            <input id="np-patient-search" type="search" placeholder="Search patients by name, email or MRN…"
                    oninput="filterPatientList()"
                    style="width:100%;font-family:inherit;font-size:14px;padding:11px 14px;
                           border:1px solid var(--line);border-radius:10px;background:var(--white);">
@@ -7853,7 +7853,7 @@ if(!window.supabase){
     if(error || !o){ cerrarVentanaPDF(); alert('Could not open the order.'); return; }
     let p = (typeof npPatients !== 'undefined' && npPatients.find(x => x.user_id === o.patient_user_id)) || null;
     if(!p){
-      const r = await supabaseClient.from('health_history').select('full_name, date_of_birth, gender, phone').eq('user_id', o.patient_user_id).maybeSingle();
+      const r = await supabaseClient.from('health_history').select('full_name, date_of_birth, gender, phone, record_number').eq('user_id', o.patient_user_id).maybeSingle();
       p = r.data || {};
     }
     auditarAcceso(o.patient_user_id, 'print_order', o.id);   // la base ignora esto si no es personal
@@ -8132,7 +8132,7 @@ if(!window.supabase){
   <div class="linea-cian"></div>
   <div class="cuerpo">
     <div class="t-row"><h1>REFERRAL ORDER</h1>${campo('Date', new Date(r.signed_at || Date.now()).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }), 'margin:0;min-width:2.3in;')}</div>
-    ${campo('Patient name', p.full_name)}
+    <div class="fila">${campo('Patient name', p.full_name)}${campo('MRN', p.record_number ? String(p.record_number) : '', 'flex:.35')}</div>
     <div class="fila">${campo('Date of birth', dob)}${campo('Sex', sexo, 'flex:.45')}${campo('Phone', p.phone)}</div>
     <h2>REFER TO</h2>
     <div class="esp">${REF_ESPECIALIDADES.map(e => '<span>' + caja(r.specialty === e) + escapeHtml(e) + '</span>').join('')}<span>${caja(esOtra)}Other${esOtra ? ': <b>' + escapeHtml(r.specialty) + '</b>' : ''}</span></div>
@@ -8235,7 +8235,7 @@ if(!window.supabase){
   <div class="linea-cian"></div>
   <div class="cuerpo">
     <div class="t-row"><h1>LABORATORY ORDER</h1><div class="campo" style="margin:0;min-width:2.3in;"><label>Date</label><div>${fecha(o.signed_at || new Date())}</div></div></div>
-    <div class="campo"><label>Patient name</label><div>${escapeHtml(p.full_name || '')}</div></div>
+    <div class="fila"><div class="campo"><label>Patient name</label><div>${escapeHtml(p.full_name || '')}</div></div><div class="campo" style="flex:.35"><label>MRN</label><div>${p.record_number || ''}</div></div></div>
     <div class="fila"><div class="campo"><label>Date of birth</label><div>${dob}</div></div><div class="campo" style="flex:.45"><label>Sex</label><div>${escapeHtml(sexo)}</div></div><div class="campo"><label>Phone</label><div>${escapeHtml(p.phone || '')}</div></div></div>
     <h2>TESTS ORDERED</h2>
     ${larga ? tablaDos + '<table>' + filas + '</table>' : '<table><tr><th>Test</th><th class="cpt">CPT</th></tr>' + filas + '</table>'}
@@ -8685,7 +8685,7 @@ if(!window.supabase){
   <div class="linea-cian"></div>
   <div class="cuerpo">
     <div class="t-row"><h1>PRESCRIPTION</h1><div class="campo" style="margin:0;min-width:2.3in;"><label>Date</label><div>${new Date(r.signed_at || Date.now()).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}</div></div></div>
-    <div class="campo"><label>Patient name</label><div>${escapeHtml(p.full_name || '')}</div></div>
+    <div class="fila"><div class="campo"><label>Patient name</label><div>${escapeHtml(p.full_name || '')}</div></div><div class="campo" style="flex:.35"><label>MRN</label><div>${p.record_number || ''}</div></div></div>
     <div class="fila"><div class="campo"><label>Date of birth</label><div>${dob}</div></div><div class="campo"><label>Allergies</label><div>${escapeHtml(r.allergies || 'None recorded')}</div></div></div>
     <div class="campo"><label>Address</label><div>${escapeHtml(dir)}</div></div>
     ${r.pharmacy ? '<div class="campo"><label>Pharmacy</label><div>' + escapeHtml(r.pharmacy) + '</div></div>' : ''}
@@ -11736,7 +11736,7 @@ if(!window.supabase){
         + '<div style="min-width:0;"><div class="name">' + nombre + chip + pendiente + '</div>'
         // "Plan" fuera: solo hay un plan, asi que decirlo en cada fila no
         // informaba de nada y encima salia vacio.
-        + '<div class="meta">' + (p.email || '') + ' · Objetivo: ' + (p.goal || '—') + '</div></div></div>'
+        + '<div class="meta">' + (p.record_number ? '<b class="notranslate" translate="no">MRN ' + p.record_number + '</b> · ' : '') + (p.email || '') + ' · Objetivo: ' + (p.goal || '—') + '</div></div></div>'
         + '<div class="meta"' + (etapa.urgente
               ? ' style="color:#8C2F2F;font-weight:700;"'
               : (etapa.alerta ? ' style="color:#8A5A12;font-weight:600;"' : ''))
@@ -12034,12 +12034,12 @@ if(!window.supabase){
     if(!box || !out) return;
     const q = box.value.trim().toLowerCase();
     if(q.length < 2){ out.innerHTML = ''; return; }
-    const hits = npPatients.filter(p => [p.full_name, p.email, p.date_of_birth, p.phone]
+    const hits = npPatients.filter(p => [p.full_name, p.email, p.date_of_birth, p.phone, p.record_number]
       .some(v => v && String(v).toLowerCase().includes(q))).slice(0, 8);
     out.innerHTML = hits.length === 0 ? '<p class="np-empty">No patients match.</p>'
       : hits.map(p => '<div class="np-row" onclick="abrirFichaPaciente(\'' + p.id + '\')">'
           + '<div><div class="name">' + escapeHtml(p.full_name || p.email || 'Patient') + '</div>'
-          + '<div class="meta">' + escapeHtml(p.email || '') + (p.date_of_birth ? ' · DOB ' + escapeHtml(p.date_of_birth) : '') + '</div></div>'
+          + '<div class="meta">' + (p.record_number ? 'MRN ' + p.record_number + ' · ' : '') + escapeHtml(p.email || '') + (p.date_of_birth ? ' · DOB ' + escapeHtml(p.date_of_birth) : '') + '</div></div>'
           + '<div class="meta">' + escapeHtml(npEtapaPaciente(p).texto) + '</div></div>').join('');
   }
 
@@ -14047,7 +14047,7 @@ if(!window.supabase){
   ${r.signed ? '' : '<div class="draft">Draft — not signed</div>'}
 
   <table class="meta">
-    <tr><td class="k">Patient</td><td><b>${escapeHtml(pt && pt.full_name || '—')}</b></td></tr>
+    <tr><td class="k">Patient</td><td><b>${escapeHtml(pt && pt.full_name || '—')}</b>${pt && pt.record_number ? ' &nbsp;·&nbsp; MRN ' + pt.record_number : ''}</td></tr>
     <tr><td class="k">Date of birth</td><td>${fmt(pt && pt.date_of_birth)}</td></tr>
     <tr><td class="k">Encounter</td><td>${fmt(r.encounter_date)}${r.encounter_time ? " at " + to12Hour(r.encounter_time) : ""}</td></tr>
     <tr><td class="k">Encounter type</td><td>${escapeHtml(r.encounter_type || '—')}${r.template && PLANTILLAS[r.template] ? ' (' + PLANTILLAS[r.template].short + ', v' + (r.template_version || 1) + ')' : ''}</td></tr>
@@ -14223,7 +14223,7 @@ if(!window.supabase){
       '<div class="fh-top">'
       +   '<div class="fh-avatar notranslate" translate="no">' + escapeHtml(iniciales) + '</div>'
       +   '<div><div class="fh-nombre">' + escapeHtml(nombre) + '</div>'
-      +   '<div class="fh-email">' + escapeHtml(p.email || '') + '</div></div>'
+      +   '<div class="fh-email">' + (p.record_number ? '<b class="notranslate" translate="no">MRN ' + p.record_number + '</b> · ' : '') + escapeHtml(p.email || '') + '</div></div>'
       +   '<div class="fh-pills">' + pills.join('') + '</div>'
       + '</div>'
       + (datos.length ? '<div class="fh-datos">' + datos.join('') + '</div>' : '');
