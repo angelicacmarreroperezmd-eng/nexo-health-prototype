@@ -3,6 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 3 nov 2026: quien llega desde un anuncio o enlace de Facebook/Instagram
+     (fbclid, igshid o utm_source de Meta) va directo a /evaluacion, que es mas
+     liviana y tiene el boton de empezar. Corre antes de cargar el resto de la
+     pagina. Nunca toca enlaces del portal (sesion abierta, citas, pagos). -->
+<script>
+(function(){
+  try{
+    var q = location.search || '';
+    if(location.pathname !== '/' ) return;
+    if(!/[?&](fbclid|igshid)=|[?&]utm_source=(ig|fb|facebook|instagram|meta)(&|$)/i.test(q)) return;
+    if(/(token|cita|pagar|code|type=|error)/i.test(q + location.hash)) return;
+    for(var i = 0; i < localStorage.length; i++){ if(/^sb-.*-auth-token$/.test(localStorage.key(i))) return; }
+    location.replace('/evaluacion/' + q);
+  }catch(e){}
+})();
+</script>
 <!-- Google Analytics (GA4) — 2 nov 2026. SOLO paginas publicas.
      HIPAA: nunca se carga con sesion abierta (portal de paciente o medico),
      ni en enlaces de correo (cita, pago, tokens). Se manda solo la ruta, sin
