@@ -46,7 +46,7 @@
 <style>
   :root{
     --ink:#0F2336; --ink-soft:#3A4A66; --paper:#F5F8FD; --paper-warm:#EEF3FD; --white:#fff;
-    --brand:#01E0FE; --brand-ink:#0A1A2F; --accent:#2FAFC0; --line:rgba(15,35,54,0.13);
+    --brand:#01E0FE; --brand-mint:#00F5D0; --brand-ink:#0A1A2F; --accent:#2FAFC0; --line:rgba(15,35,54,0.13);
     --serif:'Instrument Serif',Georgia,serif; --sans:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
   }
   *{box-sizing:border-box;}
@@ -55,7 +55,7 @@
   a{color:inherit;}
   .wrap{max-width:1120px;margin:0 auto;padding:0 20px;}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:100px;padding:15px 28px;font-weight:700;font-size:16px;text-decoration:none;border:1.5px solid transparent;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease;}
-  .btn-primary{background:var(--brand);color:var(--brand-ink);box-shadow:0 10px 24px -12px rgba(1,224,254,.9);}
+  .btn-primary{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-mint) 100%);color:var(--brand-ink);box-shadow:0 10px 24px -12px rgba(1,224,254,.9);}
   .btn-primary:hover{transform:translateY(-1px);box-shadow:0 14px 28px -12px rgba(1,224,254,1);}
   .btn-outline{border-color:var(--ink);color:var(--ink);background:transparent;}
   .eyebrow{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;}
@@ -67,7 +67,18 @@
   /* nav */
   .nav{position:sticky;top:0;z-index:10;background:rgba(245,248,253,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
   .nav .wrap{display:flex;align-items:center;justify-content:space-between;height:66px;}
-  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;text-decoration:none;}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-0.01em;text-decoration:none;}
+  /* 3 nov 2026: igual que la portada — barra de la oferta y foto con mas color */
+  #oferta-barra{display:block;overflow:hidden;white-space:nowrap;padding:9px 0;font-size:14px;line-height:1.4;
+    background:linear-gradient(90deg,var(--brand) 0%,var(--brand-mint) 100%);color:var(--brand-ink);text-decoration:none;}
+  #oferta-barra[hidden]{display:none;}
+  #oferta-barra .oferta-pista{display:inline-flex;width:max-content;animation:oferta-cinta 38s linear infinite;}
+  #oferta-barra .oferta-item{display:inline-flex;align-items:center;padding:0 34px;}
+  #oferta-barra .oferta-item::after{content:'✦';margin-left:68px;opacity:0.55;font-size:11px;}
+  #oferta-barra .oferta-item b{margin:0 4px;}
+  @keyframes oferta-cinta{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
+  @media (prefers-reduced-motion: reduce){ #oferta-barra{text-align:center;} #oferta-barra .oferta-pista{animation:none;} #oferta-barra .oferta-item ~ .oferta-item{display:none;} #oferta-barra .oferta-item::after{content:none;} }
+  .hero-bg img{filter:saturate(1.25) contrast(1.04);}
   .logo img{height:34px;width:auto;}
   .nav-r{display:flex;align-items:center;gap:18px;font-size:14.5px;font-weight:600;}
   .nav-r a.login{text-decoration:none;}
@@ -158,6 +169,8 @@
 </style>
 </head>
 <body>
+<a id="oferta-barra" href="https://nuviclinic.com/?evaluar=1" data-cta><span class="oferta-pista"><span class="oferta-item">🦃&nbsp;<b>Especial de noviembre:</b>&nbsp;tu primer mes por&nbsp;<b>$35</b>&nbsp;(regular $50) · hasta el 30 de nov. <span aria-hidden="true">&nbsp;→</span></span><span class="oferta-item">🦃&nbsp;<b>Especial de noviembre:</b>&nbsp;tu primer mes por&nbsp;<b>$35</b>&nbsp;(regular $50) · hasta el 30 de nov. <span aria-hidden="true">&nbsp;→</span></span><span class="oferta-item">🦃&nbsp;<b>Especial de noviembre:</b>&nbsp;tu primer mes por&nbsp;<b>$35</b>&nbsp;(regular $50) · hasta el 30 de nov. <span aria-hidden="true">&nbsp;→</span></span><span class="oferta-item">🦃&nbsp;<b>Especial de noviembre:</b>&nbsp;tu primer mes por&nbsp;<b>$35</b>&nbsp;(regular $50) · hasta el 30 de nov. <span aria-hidden="true">&nbsp;→</span></span></span></a>
+<script>(function(){try{var hoy=new Date(Date.now()-4*3600e3).toISOString().slice(0,10);if(hoy>'2026-11-30')document.getElementById('oferta-barra').hidden=true;}catch(e){}})();</script>
 
 <header class="nav">
   <div class="wrap">
