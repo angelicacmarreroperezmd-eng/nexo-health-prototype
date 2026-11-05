@@ -364,8 +364,7 @@ async function correrRecordatorios(dry: boolean) {
       shell("Your membership expired today", `
         <p style="margin:0 0 14px;">Hi ${esc(first)} — your membership was paid through <b>${esc(fecha)}</b>, which is today.
           To keep your care and your medication refills going, renew for ${MEMBERSHIP_STR}:</p>
-        <p style="margin:0 0 12px;">${btn(RENOVAR + "&metodo=ath", "Renew with ATH Móvil")}</p>
-        <p style="margin:0 0 8px;">${btn2(RENOVAR + "&metodo=card", "Add a card — renews automatically")}</p>
+        <p style="margin:0 0 8px;">${btn(RENOVAR + "&metodo=card", "Renew with a card — renews automatically")}</p>
         <p style="margin:0 0 18px;font-size:13.5px;color:#7A8FA3;line-height:1.6;">With a card, your membership renews automatically every 28 days
           (${MEMBERSHIP_STR} every 28 days), so you won't need to do this again. You can cancel anytime from your dashboard.</p>
         <p style="margin:0 0 14px;">An active membership and an up-to-date follow-up evaluation are what let your physician renew your medication.</p>
@@ -932,7 +931,7 @@ Deno.serve(async (req: Request) => {
               <p style="margin:0 0 14px;">Hi ${esc(first)} — we tried to charge ${esc(amount)}${
                 data.last4 ? ` to the card ending in ${esc(data.last4)}` : " to your saved card"} and the bank declined it.</p>
               <p style="margin:0 0 20px;">Your access is not interrupted today. ${data.until
-                ? `Your current period ends ${esc(data.until)}. ` : ""}Please pay with another card or ATH Móvil from your dashboard so your care continues without a gap. We'll retry the saved card tomorrow.</p>
+                ? `Your current period ends ${esc(data.until)}. ` : ""}Please pay with another card from your dashboard so your care continues without a gap. We'll retry the saved card tomorrow.</p>
               ${btn(SITE, "Update payment")}`), "patient");
         }
         await trySend(STAFF_AVISOS, `Renewal declined — ${name}`,
