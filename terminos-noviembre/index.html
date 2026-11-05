@@ -41,19 +41,20 @@
   .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;}
   .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-0.01em;text-decoration:none;color:var(--ink);}
   .logo img{width:34px;height:34px;}
-  .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:100px;padding:12px 22px;font-weight:700;font-size:15px;text-decoration:none;
+  .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:100px;padding:10px 18px;font-weight:700;font-size:14px;white-space:nowrap;text-decoration:none;
     background:linear-gradient(135deg,var(--brand) 0%,var(--brand-mint) 100%);color:var(--brand-ink);}
   main{padding:34px 0 50px;}
   .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;}
   h1{font-family:var(--serif);font-weight:400;font-size:clamp(32px,6vw,46px);line-height:1.1;margin:6px 0 12px;}
   h1 em{color:var(--accent);}
   .resumen{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin:0 0 26px;}
-  .resumen b{font-size:20px;}
+  .resumen{font-size:16.5px;} .resumen .precio{font-size:22px;font-weight:800;}
   ol{padding-left:22px;margin:0;}
   ol li{margin:0 0 14px;padding-left:4px;}
   h2{font-size:18px;margin:34px 0 10px;}
   .meta{color:var(--ink-soft);font-size:14px;margin-top:28px;}
   .en{border-top:1px solid var(--line);margin-top:36px;padding-top:6px;font-size:15px;color:var(--ink-soft);}
+  @media (max-width:420px){ .logo{font-size:17px;} .logo img{width:30px;height:30px;} .btn{padding:9px 14px;font-size:13px;} }
   footer{border-top:1px solid var(--line);padding:22px 0;font-size:13.5px;color:var(--ink-soft);}
   footer nav{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;}
 </style>
@@ -72,7 +73,7 @@
     <h1>Términos y condiciones: <em>primer mes por $35</em></h1>
 
     <div class="resumen">
-      <b>$35</b> por tu primer periodo de membresía de 28 días (precio regular <b>$50</b>).
+      <span class="precio">$35</span> por tu primer periodo de membresía de 28 días (precio regular <b>$50</b>).
       Válido del <b>1 al 30 de noviembre de 2026</b> para miembros nuevos en Puerto Rico.
       Luego se renueva a $50 cada 28 días hasta que canceles.
     </div>
