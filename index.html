@@ -13294,6 +13294,9 @@ if(!window.supabase){
         { title:'Medication & orders',
           note:'Choosing a medication here does not approve or send a prescription. Approval stays in "Medications & prescriptions".',
           fields: [
+          { k:'brand_offered', l:'FDA-approved product (e.g., Zepbound®) offered and discussed', t:'radio', o:['Yes','No'], half:true },
+          { k:'brand_choice', l:'Product prescribed', t:'radio', o:['FDA-approved (brand)','Compounded'], half:true },
+          { k:'brand_reason', l:'If compounded: patient-specific clinical reason (price or preference are not clinical reasons)', t:'area', rows:2 },
           { k:'medication', l:'Medication', t:'radio', o:['Tirzepatide','Semaglutide'] },
           { k:'start_dose', l:'Starting dose (mg)', t:'num', half:true },
           { k:'volume', l:'Volume (mL / units)', t:'text', half:true, hint:'Only with the verified concentration of the product.' },
@@ -13344,6 +13347,9 @@ if(!window.supabase){
         { title:'Medication',
           note:'This template only documents "Continue". Dose changes are not made from here.',
           fields: [
+          { k:'brand_offered', l:'FDA-approved product (e.g., Zepbound®) offered and discussed', t:'radio', o:['Yes','No'], half:true },
+          { k:'brand_choice', l:'Product prescribed', t:'radio', o:['FDA-approved (brand)','Compounded'], half:true },
+          { k:'brand_reason', l:'If compounded: patient-specific clinical reason (price or preference are not clinical reasons)', t:'area', rows:2 },
           { k:'plan_medication', l:'Medication', t:'radio', o:['Continue'] }
         ]}
       ]
